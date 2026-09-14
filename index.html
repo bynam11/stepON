@@ -1,217 +1,72 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>STEP ON</title>
-<style>
-:root{
-  --ink:#182033;
-  --muted:#718096;
-  --line:#e8ecf3;
-  --soft:#f5f7fb;
-  --blue:#4f6df5;
-  --purple:#7a5af8;
-  --green:#18a36b;
-  --orange:#f59e0b;
-}
-*{box-sizing:border-box}
-body{
-  margin:0;background:#f3f5f9;color:var(--ink);
-  font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",sans-serif;
-}
-.app{max-width:520px;min-height:100vh;margin:auto;background:#fff;padding:20px 18px 32px}
-.top{display:flex;align-items:center;justify-content:space-between;margin:2px 0 24px}
-.brand{font-weight:900;letter-spacing:-1.5px;font-size:27px}
-.brand span{color:var(--blue)}
-.badge{font-size:12px;padding:7px 10px;background:#eef1ff;color:#4b59d8;border-radius:999px;font-weight:800}
-.hero{border-radius:26px;padding:24px 22px;color:#fff;background:linear-gradient(135deg,#4f6df5,#7a5af8);box-shadow:0 14px 32px rgba(79,109,245,.22)}
-.eyebrow{font-size:12px;font-weight:800;opacity:.78;letter-spacing:.5px}
-.hero h1{font-size:29px;line-height:1.22;letter-spacing:-1.6px;margin:7px 0 8px}
-.hero p{margin:0;opacity:.88;font-size:14px;line-height:1.5}
-.loc{margin-top:17px;display:inline-flex;padding:8px 11px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.12);border-radius:999px;font-size:13px;font-weight:700}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
-.card{border:1px solid var(--line);border-radius:20px;padding:17px;background:#fff}
-.label{font-size:12px;color:var(--muted);font-weight:700;margin-bottom:8px}
-.num{font-size:27px;font-weight:900;letter-spacing:-1px}
-.unit{font-size:13px;color:var(--muted);font-weight:700;margin-left:3px}
-.small{font-size:13px;color:var(--muted);line-height:1.55}
-.section-title{font-size:16px;font-weight:900;margin:25px 0 12px}
-.progress{height:12px;background:#edf0f5;border-radius:999px;overflow:hidden}
-.progress > div{height:100%;width:0%;background:linear-gradient(90deg,var(--blue),var(--purple));border-radius:inherit;transition:width .5s}
-.progress-row{display:flex;justify-content:space-between;margin:0 0 9px;font-size:13px;font-weight:800}
-.mission{background:var(--soft);border-radius:20px;padding:17px}
-.btn{width:100%;border:0;border-radius:17px;padding:17px;font-weight:900;font-size:16px;color:#fff;background:var(--ink);margin-top:16px;cursor:pointer}
-.btn:active{transform:scale(.99)}
-.secondary{background:#eef1ff;color:#4b59d8}
-.notice{margin-top:14px;padding:14px;border-radius:15px;background:#fff8e8;color:#7c5706;font-size:12px;line-height:1.55}
-.finish{text-align:center;padding:14px 0 4px}
-.trophy{font-size:58px}
-.hide{display:none!important}
-.tabs{display:flex;gap:7px;margin-bottom:16px}
-.tab{flex:1;border:1px solid var(--line);background:#fff;padding:10px 5px;border-radius:13px;font-size:12px;font-weight:800;color:var(--muted)}
-.tab.active{background:var(--ink);color:#fff;border-color:var(--ink)}
-.footer{margin-top:24px;text-align:center;font-size:11px;color:#9aa3b2}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>stepON</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="app">
-  <div class="top">
-    <div class="brand">STEP <span>ON</span></div>
-    <div class="badge" id="pointBadge">STAIR MODE</div>
+
+  <!-- 1. 메인 홈 화면 (접속 시 처음 보이는 곳) -->
+  <div id="home-screen" class="screen active">
+    <h1>stepON</h1>
+    <p>원하는 단계를 선택하세요</p>
+
+    <div class="menu-container">
+      <button class="menu-btn" onclick="showScreen('first-floor')">
+        <span class="step-title">1층</span>
+        <span class="step-desc">만보기 (걸음 수 측정)</span>
+      </button>
+
+      <button class="menu-btn" onclick="showScreen('mid-floor')">
+        <span class="step-title">중간층</span>
+        <span class="step-desc">현재 운동량 & 상태</span>
+      </button>
+
+      <button class="menu-btn" onclick="showScreen('complete-floor')">
+        <span class="step-title">완료</span>
+        <span class="step-desc">최종 운동 결과 & 달성</span>
+      </button>
+    </div>
   </div>
 
-  <div class="tabs">
-    <button class="tab" data-point="start">① 시작</button>
-    <button class="tab" data-point="mid">② 중간</button>
-    <button class="tab" data-point="finish">③ 도착</button>
+  <!-- 2. 1층: 만보기 화면 -->
+  <div id="first-floor" class="screen">
+    <button class="back-btn" onclick="showScreen('home-screen')">← 홈으로</button>
+    <h2>1층 - 만보기</h2>
+    
+    <!-- 기존 만보기 코드 입력 위치 -->
+    <div class="step-counter-box">
+      <p>현재 걸음 수</p>
+      <h1 id="step-count">0</h1>
+      <button id="start-btn">측정 시작</button>
+    </div>
   </div>
 
-  <section id="startScreen">
-    <div class="hero">
-      <div class="eyebrow">LET'S MOVE</div>
-      <h1>엘리베이터 대신,<br>오늘의 한 걸음 ON!</h1>
-      <p>측정을 시작하고 계단을 오르며 운동량 변화를 확인해보세요.</p>
-      <div class="loc">📍 계단 시작 지점</div>
+  <!-- 3. 중간층: 현재 운동량 화면 -->
+  <div id="mid-floor" class="screen">
+    <button class="back-btn" onclick="showScreen('home-screen')">← 홈으로</button>
+    <h2>중간층 - 현재 운동량</h2>
+    
+    <div class="status-box">
+      <p>소모 칼로리: <span id="calories">0</span> kcal</p>
+      <p>이동 거리: <span id="distance">0</span> km</p>
+      <p>현재 진행률: <span id="progress">50%</span></p>
     </div>
-    <div class="grid">
-      <div class="card"><div class="label">현재 걸음 수</div><span class="num" id="steps">0</span><span class="unit">걸음</span></div>
-      <div class="card"><div class="label">예상 칼로리</div><span class="num" id="calories">0</span><span class="unit">kcal</span></div>
-    </div>
-    <div class="mission">
-      <div class="progress-row"><span>오늘의 STEP MISSION</span><span id="missionText">0 / 50</span></div>
-      <div class="progress"><div id="missionBar"></div></div>
-      <p class="small" style="margin:10px 0 0">계단 이동 중 50걸음을 채워보세요.</p>
-    </div>
-    <button class="btn" id="startBtn">측정 시작하기</button>
-  </section>
-
-  <section id="midScreen" class="hide">
-    <div class="hero">
-      <div class="eyebrow">HALFWAY THERE</div>
-      <h1>좋아, 절반쯤 왔어요! 🔥</h1>
-      <p>지금까지의 운동량을 확인하고 조금만 더 올라가 봐요.</p>
-      <div class="loc">📍 계단 중간 지점</div>
-    </div>
-    <div class="grid">
-      <div class="card"><div class="label">이번 이동 걸음</div><span class="num" id="sessionSteps">0</span><span class="unit">걸음</span></div>
-      <div class="card"><div class="label">남은 계단</div><span class="num" id="remaining">24</span><span class="unit">칸</span></div>
-      <div class="card"><div class="label">현재 총 걸음 수</div><span class="num" id="midSteps">0</span><span class="unit">걸음</span></div>
-      <div class="card"><div class="label">예상 칼로리</div><span class="num" id="midCalories">0</span><span class="unit">kcal</span></div>
-    </div>
-    <div class="mission">
-      <div class="progress-row"><span>STEP ON 진행도</span><span>50%</span></div>
-      <div class="progress"><div style="width:50%"></div></div>
-      <p class="small" style="margin:10px 0 0">💡 압전 계단의 빛을 따라 마지막 지점까지!</p>
-    </div>
-  </section>
-
-  <section id="finishScreen" class="hide">
-    <div class="finish">
-      <div class="trophy">🎉</div>
-      <div class="eyebrow" style="color:var(--green)">STEP COMPLETE</div>
-      <h1 style="letter-spacing:-1.5px;margin:8px 0">오늘의 계단 미션 완료!</h1>
-      <p class="small">엘리베이터 대신 계단을 선택했어요.</p>
-    </div>
-    <div class="grid">
-      <div class="card"><div class="label">이번 이동 걸음</div><span class="num" id="finishSession">0</span><span class="unit">걸음</span></div>
-      <div class="card"><div class="label">총 걸음 수</div><span class="num" id="finishSteps">0</span><span class="unit">걸음</span></div>
-      <div class="card"><div class="label">예상 활동량</div><span class="num" id="finishCalories">0</span><span class="unit">kcal</span></div>
-      <div class="card"><div class="label">STEP POINT</div><span class="num">+10</span><span class="unit">POINT</span></div>
-    </div>
-    <div class="mission">
-      <b>오늘도 한 걸음, 건강을 ON.</b>
-      <p class="small" style="margin:8px 0 0">다음 계단에서도 STEP ON을 찾아보세요!</p>
-    </div>
-    <button class="btn secondary" id="resetBtn">새로운 측정 시작</button>
-  </section>
-
-  <div class="notice">
-    ⚠️ 시제품용 만보기입니다. 휴대폰의 움직임 센서를 이용해 걸음을 추정하므로 기종·휴대 위치에 따라 오차가 있을 수 있습니다.
   </div>
-  <div class="footer">STEP ON · 건강한 학교를 한 걸음부터</div>
-</div>
 
-<script>
-const screens = {
-  start: document.getElementById('startScreen'),
-  mid: document.getElementById('midScreen'),
-  finish: document.getElementById('finishScreen')
-};
+  <!-- 4. 완료 화면 -->
+  <div id="complete-floor" class="screen">
+    <button class="back-btn" onclick="showScreen('home-screen')">← 홈으로</button>
+    <h2>목표 달성! 완료</h2>
+    
+    <div class="result-box">
+      <p>🎉 축하합니다! 오늘 운동을 완료했습니다.</p>
+      <button onclick="alert('수고하셨습니다!')">운동 종료</button>
+    </div>
+  </div>
 
-const params = new URLSearchParams(location.search);
-let point = params.get('point') || 'start';
-let steps = Number(localStorage.getItem('stepon_steps') || 0);
-let startSteps = Number(localStorage.getItem('stepon_start') || 0);
-let running = localStorage.getItem('stepon_running') === '1';
-let lastMagnitude = 0, lastStepTime = 0, armed = true;
-
-function kcal(n){ return Math.round(n * 0.04 * 10) / 10; }
-function session(){ return Math.max(0, steps - startSteps); }
-
-function render(){
-  Object.entries(screens).forEach(([k,el])=>el.classList.toggle('hide', k!==point));
-  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.point===point));
-  document.getElementById('pointBadge').textContent =
-    point==='start'?'START POINT':point==='mid'?'MID POINT':'FINISH POINT';
-
-  document.getElementById('steps').textContent=steps;
-  document.getElementById('calories').textContent=kcal(steps);
-  const s=session();
-  document.getElementById('sessionSteps').textContent=s;
-  document.getElementById('midSteps').textContent=steps;
-  document.getElementById('midCalories').textContent=kcal(s);
-  document.getElementById('finishSession').textContent=s;
-  document.getElementById('finishSteps').textContent=steps;
-  document.getElementById('finishCalories').textContent=kcal(s);
-
-  const target=50, p=Math.min(100,Math.round(s/target*100));
-  document.getElementById('missionText').textContent=`${Math.min(s,target)} / ${target}`;
-  document.getElementById('missionBar').style.width=p+'%';
-  document.getElementById('startBtn').textContent=running?'측정 중...':'측정 시작하기';
-  localStorage.setItem('stepon_steps',steps);
-  localStorage.setItem('stepon_start',startSteps);
-  localStorage.setItem('stepon_running',running?'1':'0');
-}
-
-async function startTracking(){
-  if(running) return;
-  try{
-    if(typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function'){
-      const result=await DeviceMotionEvent.requestPermission();
-      if(result!=='granted') throw new Error('권한 거부');
-    }
-    startSteps=steps; running=true; render();
-  }catch(e){
-    alert('움직임 센서 권한이 필요합니다. 브라우저 설정에서 허용한 뒤 다시 시도해주세요.');
-  }
-}
-
-window.addEventListener('devicemotion',e=>{
-  if(!running) return;
-  const a=e.accelerationIncludingGravity;
-  if(!a) return;
-  const m=Math.sqrt((a.x||0)**2+(a.y||0)**2+(a.z||0)**2);
-  const now=Date.now();
-  const delta=Math.abs(m-lastMagnitude);
-  if(armed && delta>2.1 && now-lastStepTime>280){
-    steps++; lastStepTime=now; armed=false; render();
-  }
-  if(delta<0.7) armed=true;
-  lastMagnitude=m;
-});
-
-document.getElementById('startBtn').addEventListener('click',startTracking);
-document.getElementById('resetBtn').addEventListener('click',()=>{
-  steps=0; startSteps=0; running=false; point='start';
-  history.replaceState(null,'','?point=start'); render();
-});
-document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{
-  point=b.dataset.point;
-  history.replaceState(null,'',`?point=${point}`);
-  render();
-}));
-render();
-</script>
+  <script src="script.js"></script>
 </body>
 </html>
