@@ -4,11 +4,92 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>stepON</title>
-  <link rel="stylesheet" href="style.css">
+  <style>
+    /* 1. 디자인 (CSS) 영역 */
+    body {
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f5f5f7;
+      text-align: center;
+    }
+
+    /* 화면 전환 핵심 CSS: active 클래스 없는 화면은 다 숨김 */
+    .screen {
+      display: none;
+      padding: 20px;
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100vh;
+      box-sizing: border-box;
+    }
+
+    /* active 클래스가 붙으면 화면 표시 */
+    .screen.active {
+      display: block;
+    }
+
+    /* 메뉴 버튼 스타일 */
+    .menu-container {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin-top: 30px;
+    }
+
+    .menu-btn {
+      padding: 20px;
+      border: none;
+      border-radius: 14px;
+      background-color: #007aff;
+      color: white;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      transition: background-color 0.2s;
+    }
+
+    .menu-btn:hover {
+      background-color: #0056b3;
+    }
+
+    .step-title {
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .step-desc {
+      font-size: 14px;
+      opacity: 0.85;
+      margin-top: 5px;
+    }
+
+    /* 뒤로가기 버튼 */
+    .back-btn {
+      background: none;
+      border: none;
+      font-size: 16px;
+      color: #007aff;
+      cursor: pointer;
+      float: left;
+      margin-bottom: 20px;
+      font-weight: bold;
+    }
+
+    /* 콘텐츠 박스 스타일 */
+    .box {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      margin-top: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+  </style>
 </head>
 <body>
 
-  <!-- 1. 메인 홈 화면 (접속 시 처음 보이는 곳) -->
+  <!-- 메인 홈 화면 (초기 화면) -->
   <div id="home-screen" class="screen active">
     <h1>stepON</h1>
     <p>원하는 단계를 선택하세요</p>
@@ -31,42 +112,58 @@
     </div>
   </div>
 
-  <!-- 2. 1층: 만보기 화면 -->
+  <!-- 1층: 만보기 화면 -->
   <div id="first-floor" class="screen">
     <button class="back-btn" onclick="showScreen('home-screen')">← 홈으로</button>
+    <div style="clear:both;"></div>
     <h2>1층 - 만보기</h2>
     
-    <!-- 기존 만보기 코드 입력 위치 -->
-    <div class="step-counter-box">
+    <div class="box">
       <p>현재 걸음 수</p>
       <h1 id="step-count">0</h1>
-      <button id="start-btn">측정 시작</button>
+      <button style="padding: 10px 20px; background: #34c759; color: white; border: none; border-radius: 8px; cursor: pointer;">측정 시작</button>
     </div>
   </div>
 
-  <!-- 3. 중간층: 현재 운동량 화면 -->
+  <!-- 중간층: 현재 운동량 화면 -->
   <div id="mid-floor" class="screen">
     <button class="back-btn" onclick="showScreen('home-screen')">← 홈으로</button>
+    <div style="clear:both;"></div>
     <h2>중간층 - 현재 운동량</h2>
     
-    <div class="status-box">
-      <p>소모 칼로리: <span id="calories">0</span> kcal</p>
-      <p>이동 거리: <span id="distance">0</span> km</p>
-      <p>현재 진행률: <span id="progress">50%</span></p>
+    <div class="box">
+      <p>🔥 소모 칼로리: <span>0</span> kcal</p>
+      <p>🏃 이동 거리: <span>0</span> km</p>
+      <p>📊 현재 진행률: <span>50%</span></p>
     </div>
   </div>
 
-  <!-- 4. 완료 화면 -->
+  <!-- 완료 화면 -->
   <div id="complete-floor" class="screen">
     <button class="back-btn" onclick="showScreen('home-screen')">← 홈으로</button>
+    <div style="clear:both;"></div>
     <h2>목표 달성! 완료</h2>
     
-    <div class="result-box">
+    <div class="box">
       <p>🎉 축하합니다! 오늘 운동을 완료했습니다.</p>
-      <button onclick="alert('수고하셨습니다!')">운동 종료</button>
     </div>
   </div>
 
-  <script src="script.js"></script>
+  <!-- 2. 화면 전환 자바스크립트 (JS) 영역 -->
+  <script>
+    function showScreen(screenId) {
+      // 모든 화면 숨기기
+      const screens = document.querySelectorAll('.screen');
+      screens.forEach(screen => {
+        screen.classList.remove('active');
+      });
+
+      // 선택한 화면만 보이기
+      const targetScreen = document.getElementById(screenId);
+      if (targetScreen) {
+        targetScreen.classList.add('active');
+      }
+    }
+  </script>
 </body>
 </html>
