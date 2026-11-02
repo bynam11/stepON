@@ -9,8 +9,7 @@
 * { box-sizing: border-box; }
 
 body {
-  font-family: Pretendard, -apple-system, BlinkMacSystemFont,
-    system-ui, sans-serif;
+  font-family: Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   margin: 0;
   background: #f5f5f7;
   color: #222;
@@ -128,7 +127,6 @@ label {
   line-height: 1.6;
 }
 
-/* 랭킹 리더보드 스타일 */
 .user-profile {
   display: flex;
   justify-content: space-between;
@@ -162,32 +160,23 @@ label {
   <h1>stepON</h1>
   <p class="muted">
     한 걸음부터 바꿔보세요!<br>
-    학교 계정(@ggg.hs.kr)으로 접속하여 랭킹에 도전하세요.
+    닉네임을 정하고 전교생 실시간 랭킹에 도전하세요.
   </p>
 
-  <!-- 로그인 상자 -->
   <div class="box">
-    <div id="login-container">
-      <p><b>학교 계정 인증</b></p>
-      <label for="input-email" style="font-size: 13px; color: #555;">이메일 주소</label>
-      <input type="email" id="input-email" placeholder="예: 251707@ggg.hs.kr">
-      
-      <label for="input-name" style="font-size: 13px; color: #555; margin-top: 10px;">이름 또는 닉네임</label>
-      <input type="text" id="input-name" placeholder="예: 홍길동">
-      
-      <button class="primary" onclick="handleSimpleLogin()">인증 후 로그인</button>
-      <p class="notice" style="margin-top: 10px;">
-        ⚠️ @ggg.hs.kr 도메인의 학교 계정만 로그인할 수 있습니다.
-      </p>
+    <div id="nickname-container">
+      <p><b>👤 사용자 닉네임 설정</b></p>
+      <input type="text" id="input-nickname" placeholder="예: 2학년1반_홍길동">
+      <button class="primary" onclick="saveNickname()">닉네임 저장하기</button>
     </div>
 
     <div id="user-info" hidden>
       <div class="user-profile">
         <div>
-          <b id="user-name">이름</b><br>
-          <span class="muted" id="user-email">000000@ggg.hs.kr</span>
+          <span class="muted" style="font-size:12px;">현재 닉네임</span><br>
+          <b id="user-nickname" style="font-size: 16px;">닉네임</b>
         </div>
-        <button class="back" onclick="logout()" style="font-size: 12px; color: #ff3b30;">로그아웃</button>
+        <button class="back" onclick="changeNickname()" style="font-size: 12px;">수정</button>
       </div>
     </div>
   </div>
@@ -257,13 +246,11 @@ label {
       현재 운동량 확인
     </button>
 
-    <button id="resume" class="secondary"
-      onclick="requestSensor()" hidden>
+    <button id="resume" class="secondary" onclick="requestSensor()" hidden>
       걸음 측정 다시 시작
     </button>
 
-    <button id="finish" class="primary"
-      onclick="finishWorkout()" hidden>
+    <button id="finish" class="primary" onclick="finishWorkout()" hidden>
       목표 달성! 기록하기
     </button>
   </div>
@@ -284,10 +271,6 @@ label {
     <p>🎯 목표 층: <b id="stat-goal">3층</b></p>
     <p>📍 현재 층: <b id="stat-floor">1층</b></p>
   </div>
-
-  <p class="notice">
-    칼로리와 거리는 걸음 수를 이용한 추정치입니다.
-  </p>
 </section>
 
 <!-- 완료 화면 -->
@@ -297,10 +280,7 @@ label {
   <div class="box">
     <h3 id="complete-title">3층 목표 완료</h3>
     <div class="step-number" id="complete-steps">0</div>
-    <p>걸음을 성공적으로 랭킹에 등록했어요!</p>
-
-    <p>추정 칼로리: <b id="complete-calories">0</b> kcal</p>
-    <p>추정 거리: <b id="complete-distance">0</b> km</p>
+    <p>전교생 랭킹에 내 걸음이 실시간으로 등록되었습니다!</p>
 
     <button class="primary" onclick="showLeaderboard()">
       🏆 랭킹 확인하러 가기
@@ -312,7 +292,7 @@ label {
   </div>
 </section>
 
-<!-- 랭킹 리더보드 화면 -->
+<!-- 랭킹 화면 -->
 <section id="leaderboard" class="screen">
   <button class="back" onclick="showScreen('home')">
     ← 홈으로
@@ -321,7 +301,6 @@ label {
   <h2>🏆 전교생 실시간 랭킹</h2>
 
   <div class="box">
-    <p class="muted">학교 계정(@ggg.hs.kr) 학생들의 실제 계단 이용 랭킹입니다.</p>
     <div id="leaderboard-list"></div>
   </div>
 </section>
@@ -344,52 +323,53 @@ label {
 </section>
 
 <script>
-let currentUser = null;
+// -----------------------------------------------------------------
+// 🔑 JSONBin 설정 (Master Key를 아래 큰따옴표 안에 넣으세요!)
+// -----------------------------------------------------------------
+const JSONBIN_KEY = "$2a$10$uaa8E7FrcZThXPAESWDJIORwfiCfPfbdV7vu2fowsweY0BTFHoTQu";
+const JSONBIN_BIN_ID = "6ae8ae8bffd5d160539fda60";
+// -----------------------------------------------------------------
 
-// 계정 직접 입력 인증 방식 (도메인 검증)
-function handleSimpleLogin() {
-  const emailInput = document.getElementById('input-email').value.trim();
-  const nameInput = document.getElementById('input-name').value.trim();
+let nickname = "";
 
-  if (!emailInput || !nameInput) {
-    alert('이메일과 이름을 모두 입력해주세요.');
-    return;
+function checkUrlParameters() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const floorParam = urlParams.get('floor');
+  if (floorParam) {
+    const floorSelect = document.getElementById('floor');
+    if (floorSelect) {
+      floorSelect.value = floorParam;
+    }
   }
-
-  if (!emailInput.endsWith('@ggg.hs.kr')) {
-    alert('⚠️ 경고: @ggg.hs.kr 학교 이메일 주소만 허용됩니다.');
-    return;
-  }
-
-  currentUser = {
-    name: nameInput,
-    email: emailInput
-  };
-
-  localStorage.setItem('stepON-user', JSON.stringify(currentUser));
-  updateUserUI();
-  alert(`${currentUser.name}님 로그인되었습니다!`);
 }
 
-function updateUserUI() {
-  const savedUser = localStorage.getItem('stepON-user');
-  if (savedUser) {
-    currentUser = JSON.parse(savedUser);
-    document.getElementById('login-container').hidden = true;
+function saveNickname() {
+  const input = document.getElementById('input-nickname').value.trim();
+  if (!input) {
+    alert('닉네임을 입력해 주세요!');
+    return;
+  }
+  nickname = input;
+  localStorage.setItem('stepON-nickname', nickname);
+  updateNicknameUI();
+}
+
+function changeNickname() {
+  document.getElementById('nickname-container').hidden = false;
+  document.getElementById('user-info').hidden = true;
+}
+
+function updateNicknameUI() {
+  const saved = localStorage.getItem('stepON-nickname');
+  if (saved) {
+    nickname = saved;
+    document.getElementById('nickname-container').hidden = true;
     document.getElementById('user-info').hidden = false;
-    document.getElementById('user-name').textContent = currentUser.name;
-    document.getElementById('user-email').textContent = currentUser.email;
+    document.getElementById('user-nickname').textContent = nickname;
   } else {
-    document.getElementById('login-container').hidden = false;
+    document.getElementById('nickname-container').hidden = false;
     document.getElementById('user-info').hidden = true;
   }
-}
-
-function logout() {
-  currentUser = null;
-  localStorage.removeItem('stepON-user');
-  updateUserUI();
-  alert('로그아웃 되었습니다.');
 }
 
 function showScreen(id) {
@@ -403,7 +383,6 @@ let session = null;
 let stepCount = 0;
 let currentFloor = 1;
 let targetFloor = 3;
-let isTracking = false;
 
 let lastMagnitude = null;
 let lastStepTime = 0;
@@ -421,20 +400,16 @@ function loadSession() {
 
 function saveSession() {
   if (!session) return;
-
   session.steps = stepCount;
   session.currentFloor = currentFloor;
   session.targetFloor = targetFloor;
 
-  localStorage.setItem(
-    'stepON-session',
-    JSON.stringify(session)
-  );
+  localStorage.setItem('stepON-session', JSON.stringify(session));
 }
 
 function startWorkout() {
-  if (!currentUser) {
-    alert('로그인 후 운동을 시작할 수 있습니다.');
+  if (!nickname) {
+    alert('먼저 닉네임을 설정해 주세요!');
     return;
   }
 
@@ -459,38 +434,30 @@ function startWorkout() {
 
 async function requestSensor() {
   if (typeof DeviceMotionEvent === 'undefined') {
-    document.getElementById('sensor-status').textContent =
-      '이 기기는 동작 센서를 지원하지 않습니다.';
+    document.getElementById('sensor-status').textContent = '이 기기는 동작 센서를 지원하지 않습니다.';
     document.getElementById('resume').hidden = false;
     return;
   }
 
   if (typeof DeviceMotionEvent.requestPermission === 'function') {
     try {
-      const permission =
-        await DeviceMotionEvent.requestPermission();
-
+      const permission = await DeviceMotionEvent.requestPermission();
       if (permission !== 'granted') {
-        document.getElementById('sensor-status').textContent =
-          '센서 권한을 허용해야 걸음 수를 측정할 수 있습니다.';
+        document.getElementById('sensor-status').textContent = '센서 권한이 필요합니다.';
         document.getElementById('resume').hidden = false;
         return;
       }
     } catch {
-      document.getElementById('sensor-status').textContent =
-        '센서 권한 요청에 실패했습니다.';
+      document.getElementById('sensor-status').textContent = '센서 권한 요청 실패';
       return;
     }
   }
 
   window.removeEventListener('devicemotion', handleMotion);
   lastMagnitude = null;
-
   window.addEventListener('devicemotion', handleMotion);
-  isTracking = true;
 
-  document.getElementById('sensor-status').textContent =
-    '걸음 수 측정 중';
+  document.getElementById('sensor-status').textContent = '걸음 수 측정 중...';
   document.getElementById('resume').hidden = true;
 }
 
@@ -498,16 +465,9 @@ function handleMotion(event) {
   if (!session) return;
 
   const acc = event.accelerationIncludingGravity;
-  if (!acc ||
-      !Number.isFinite(acc.x) ||
-      !Number.isFinite(acc.y) ||
-      !Number.isFinite(acc.z)) return;
+  if (!acc || !Number.isFinite(acc.x) || !Number.isFinite(acc.y) || !Number.isFinite(acc.z)) return;
 
-  const magnitude = Math.sqrt(
-    acc.x * acc.x +
-    acc.y * acc.y +
-    acc.z * acc.z
-  );
+  const magnitude = Math.sqrt(acc.x * acc.x + acc.y * acc.y + acc.z * acc.z);
 
   if (lastMagnitude === null) {
     lastMagnitude = magnitude;
@@ -517,10 +477,7 @@ function handleMotion(event) {
   const change = Math.abs(magnitude - lastMagnitude);
   const now = Date.now();
 
-  if (
-    change > STEP_THRESHOLD &&
-    now - lastStepTime >= MIN_STEP_INTERVAL
-  ) {
+  if (change > STEP_THRESHOLD && now - lastStepTime >= MIN_STEP_INTERVAL) {
     stepCount++;
     lastStepTime = now;
     saveSession();
@@ -531,16 +488,13 @@ function handleMotion(event) {
 }
 
 function checkFloor() {
-  const selectedFloor = Number(
-    document.getElementById('floor').value
-  );
+  const selectedFloor = Number(document.getElementById('floor').value);
 
   if (!session) {
     if (selectedFloor !== 1) {
       alert('먼저 1층에서 목표를 선택하고 운동을 시작하세요.');
       return;
     }
-
     alert('운동 목표를 선택한 뒤 시작 버튼을 눌러주세요.');
     return;
   }
@@ -550,19 +504,13 @@ function checkFloor() {
     return;
   }
 
-  if (selectedFloor > targetFloor) {
-    alert('선택한 층이 운동 목표보다 높습니다.');
-    return;
-  }
-
   currentFloor = selectedFloor;
   saveSession();
   render();
   showScreen('workout');
 
   if (currentFloor >= targetFloor) {
-    document.getElementById('sensor-status').textContent =
-      '목표 층에 도착했습니다!';
+    document.getElementById('sensor-status').textContent = '목표 층 도착!';
   }
 }
 
@@ -577,24 +525,16 @@ function render() {
   if (!session) return;
 
   const stats = getStats();
-
   document.getElementById('steps').textContent = stepCount;
-  document.getElementById('current-floor').textContent =
-    currentFloor + '층';
-
-  document.getElementById('progress').style.width =
-    ((currentFloor - 1) / (targetFloor - 1) * 100) + '%';
-
-  document.getElementById('progress-text').textContent =
-    `목표 ${targetFloor}층 · 현재 ${currentFloor}층`;
+  document.getElementById('current-floor').textContent = currentFloor + '층';
+  document.getElementById('progress').style.width = ((currentFloor - 1) / (targetFloor - 1) * 100) + '%';
+  document.getElementById('progress-text').textContent = `목표 ${targetFloor}층 · 현재 ${currentFloor}층`;
 
   document.getElementById('stat-steps').textContent = stepCount;
   document.getElementById('calories').textContent = stats.calories;
   document.getElementById('distance').textContent = stats.distance;
-  document.getElementById('stat-goal').textContent =
-    targetFloor + '층';
-  document.getElementById('stat-floor').textContent =
-    currentFloor + '층';
+  document.getElementById('stat-goal').textContent = targetFloor + '층';
+  document.getElementById('stat-floor').textContent = currentFloor + '층';
 
   const reached = currentFloor >= targetFloor;
   document.getElementById('finish').hidden = !reached;
@@ -605,56 +545,23 @@ function showStats() {
   showScreen('stats');
 }
 
-function finishWorkout() {
-  if (!session || currentFloor < targetFloor) {
-    alert('목표 층을 먼저 확인해주세요.');
-    return;
+// 🌐 JSONBin 실시간 데이터 수신
+async function fetchGlobalLeaderboard() {
+  try {
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
+      headers: { "X-Master-Key": JSONBIN_KEY }
+    });
+    const data = await res.json();
+    return Array.isArray(data.record) ? data.record : [];
+  } catch (err) {
+    console.error("랭킹 불러오기 실패:", err);
+    return [];
   }
-
-  if (!confirm('운동을 완료하고 기록할까요?')) return;
-
-  window.removeEventListener('devicemotion', handleMotion);
-  isTracking = false;
-
-  const stats = getStats();
-
-  const record = {
-    date: new Date().toLocaleString('ko-KR'),
-    goal: targetFloor,
-    steps: stepCount,
-    calories: stats.calories,
-    distance: stats.distance,
-    userName: currentUser ? currentUser.name : '익명',
-    userEmail: currentUser ? currentUser.email : ''
-  };
-
-  const records = loadRecords();
-  records.unshift(record);
-
-  localStorage.setItem(
-    'stepON-records',
-    JSON.stringify(records)
-  );
-
-  updateLeaderboardData(record.userName, record.steps);
-
-  document.getElementById('complete-title').textContent =
-    targetFloor + '층 목표 달성!';
-  document.getElementById('complete-steps').textContent = stepCount;
-  document.getElementById('complete-calories').textContent =
-    stats.calories;
-  document.getElementById('complete-distance').textContent =
-    stats.distance;
-
-  session = null;
-  localStorage.removeItem('stepON-session');
-
-  showScreen('complete');
 }
 
-// 랭킹 누적 데이터 갱정
-function updateLeaderboardData(name, steps) {
-  let leaderboard = JSON.parse(localStorage.getItem('stepON-leaderboard') || '[]');
+// 🌐 JSONBin 실시간 데이터 업데이트
+async function updateLeaderboardData(name, steps) {
+  let leaderboard = await fetchGlobalLeaderboard();
   const existingIndex = leaderboard.findIndex(item => item.name === name);
 
   if (existingIndex > -1) {
@@ -664,22 +571,69 @@ function updateLeaderboardData(name, steps) {
   }
 
   leaderboard.sort((a, b) => b.steps - a.steps);
-  localStorage.setItem('stepON-leaderboard', JSON.stringify(leaderboard));
+
+  try {
+    await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Master-Key': JSONBIN_KEY
+      },
+      body: JSON.stringify(leaderboard)
+    });
+  } catch (err) {
+    console.error("랭킹 업로드 실패:", err);
+  }
 }
 
-// 실시간 랭킹 리더보드 출력 (더미 데이터 전면 삭제됨)
-function showLeaderboard() {
+async function finishWorkout() {
+  if (!session || currentFloor < targetFloor) {
+    alert('목표 층을 먼저 확인해주세요.');
+    return;
+  }
+
+  if (!confirm('운동을 완료하고 기록할까요?')) return;
+
+  window.removeEventListener('devicemotion', handleMotion);
+
+  const stats = getStats();
+  const record = {
+    date: new Date().toLocaleString('ko-KR'),
+    goal: targetFloor,
+    steps: stepCount,
+    calories: stats.calories,
+    distance: stats.distance,
+    userName: nickname
+  };
+
+  const records = loadRecords();
+  records.unshift(record);
+  localStorage.setItem('stepON-records', JSON.stringify(records));
+
+  await updateLeaderboardData(nickname, stepCount);
+
+  document.getElementById('complete-title').textContent = targetFloor + '층 목표 달성!';
+  document.getElementById('complete-steps').textContent = stepCount;
+
+  session = null;
+  localStorage.removeItem('stepON-session');
+  showScreen('complete');
+}
+
+async function showLeaderboard() {
   const list = document.getElementById('leaderboard-list');
+  list.innerHTML = '<p style="text-align:center; padding:20px; color:#777;">전교생 랭킹을 가져오는 중...</p>';
+  showScreen('leaderboard');
+
+  const leaderboard = await fetchGlobalLeaderboard();
   list.replaceChildren();
 
-  let leaderboard = JSON.parse(localStorage.getItem('stepON-leaderboard') || '[]');
-  
   if (leaderboard.length === 0) {
     const empty = document.createElement('p');
     empty.style.textAlign = "center";
     empty.style.padding = "20px 0";
     empty.style.color = "#777";
-    empty.textContent = '아직 등록된 랭킹 기록이 없습니다. 첫 번째 주자가 되어보세요!';
+    empty.textContent = '아직 등록된 랭킹 기록이 없습니다.';
     list.appendChild(empty);
   } else {
     leaderboard.forEach((user, index) => {
@@ -702,15 +656,11 @@ function showLeaderboard() {
       list.appendChild(item);
     });
   }
-
-  showScreen('leaderboard');
 }
 
 function loadRecords() {
   try {
-    return JSON.parse(
-      localStorage.getItem('stepON-records') || '[]'
-    );
+    return JSON.parse(localStorage.getItem('stepON-records') || '[]');
   } catch {
     return [];
   }
@@ -721,7 +671,6 @@ function showRecords() {
   list.replaceChildren();
 
   const records = loadRecords();
-
   if (records.length === 0) {
     const empty = document.createElement('p');
     empty.textContent = '아직 저장된 기록이 없습니다.';
@@ -739,8 +688,7 @@ function showRecords() {
     date.textContent = record.date;
 
     const detail = document.createElement('p');
-    detail.textContent =
-      `${record.steps}걸음 · ${record.calories} kcal · ${record.distance} km`;
+    detail.textContent = `${record.steps}걸음 · ${record.calories} kcal · ${record.distance} km`;
 
     item.append(title, date, detail);
     list.appendChild(item);
@@ -751,13 +699,13 @@ function showRecords() {
 
 function clearRecords() {
   if (!confirm('모든 기록을 삭제할까요?')) return;
-
   localStorage.removeItem('stepON-records');
-  localStorage.removeItem('stepON-leaderboard');
   showRecords();
 }
 
-updateUserUI();
+// 실행
+checkUrlParameters();
+updateNicknameUI();
 session = loadSession();
 
 if (session) {
@@ -766,9 +714,6 @@ if (session) {
   targetFloor = Number(session.targetFloor) || 3;
   render();
   showScreen('workout');
-  document.getElementById('sensor-status').textContent =
-    '저장된 운동을 복구했습니다. 센서가 멈췄다면 다시 측정을 시작하세요.';
-  document.getElementById('resume').hidden = false;
 }
 </script>
 
