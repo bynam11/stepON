@@ -1,10 +1,12 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>stepON</title>
+<title>stepON - 스마트 계단 헬스케어</title>
+
+<!-- Google Identity Services (구글 로그인 SDK) -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 
 <style>
 * { box-sizing: border-box; }
@@ -27,7 +29,7 @@ body {
 
 .screen.active { display: block; }
 
-h1 { color: #007aff; font-size: 32px; }
+h1 { color: #007aff; font-size: 32px; margin-bottom: 8px; }
 .muted { color: #777; font-size: 14px; line-height: 1.6; }
 
 .box {
@@ -119,6 +121,31 @@ label {
   color: #777;
   line-height: 1.6;
 }
+
+/* 랭킹 리더보드 스타일 */
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f0f7ff;
+  padding: 12px 16px;
+  border-radius: 12px;
+  margin-bottom: 15px;
+}
+
+.rank-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.rank-item:first-child { background: #fffdf0; border-radius: 8px; } /* 1위 황금빛 효과 */
+.rank-badge { font-weight: bold; width: 30px; }
+.rank-1 { color: #ff9500; }
+.rank-2 { color: #8e8e93; }
+.rank-3 { color: #ac6035; }
 </style>
 </head>
 
@@ -129,8 +156,33 @@ label {
   <h1>stepON</h1>
   <p class="muted">
     한 걸음부터 바꿔보세요!<br>
-    오늘의 계단 오르기 목표를 설정하세요.
+    학교 구글 계정으로 로그인하고 전교생 랭킹에 도전하세요.
   </p>
+
+  <!-- 구글 로그인 / 계정 프로필 상자 -->
+  <div class="box">
+    <div id="login-container">
+      <p><b>학교 구글 계정 로그인 (@ggg.hs.kr)</b></p>
+      <div id="g_id_onload"
+        data-client_id="YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
+        data-callback="handleCredentialResponse">
+      </div>
+      <div class="g_id_signin" data-type="standard"></div>
+      <p class="notice" style="margin-top: 10px;">
+        ⚠️ 외부 구글 계정은 접근이 제한됩니다.
+      </p>
+    </div>
+
+    <div id="user-info" hidden>
+      <div class="user-profile">
+        <div>
+          <b id="user-name">학생 이름</b><br>
+          <span class="muted" id="user-email">000000@ggg.hs.kr</span>
+        </div>
+      </div>
+      <button class="back" onclick="logout()" style="font-size: 12px; color: #ff3b30;">로그아웃</button>
+    </div>
+  </div>
 
   <div class="box">
     <label for="goal">나의 운동 목표</label>
@@ -145,7 +197,7 @@ label {
   </div>
 
   <div class="box">
-    <p><b>현재 위치 선택</b></p>
+    <p><b>현재 위치 선택 (NFC 연동)</b></p>
     <p class="muted">
       NFC 태그를 찍은 뒤 이 페이지가 열리면,
       현재 도착한 층을 선택하세요.
@@ -162,6 +214,10 @@ label {
     </button>
   </div>
 
+  <button class="secondary" onclick="showLeaderboard()">
+    🏆 실시간 전교생 랭킹 보기
+  </button>
+  
   <button class="secondary" onclick="showRecords()">
     내 운동 기록 보기
   </button>
@@ -233,18 +289,34 @@ label {
   <div class="box">
     <h3 id="complete-title">3층 목표 완료</h3>
     <div class="step-number" id="complete-steps">0</div>
-    <p>걸음을 기록했어요!</p>
+    <p>걸음을 성공적으로 랭킹에 등록했어요!</p>
 
     <p>추정 칼로리: <b id="complete-calories">0</b> kcal</p>
     <p>추정 거리: <b id="complete-distance">0</b> km</p>
 
-    <button class="primary" onclick="showRecords()">
-      기록 확인하기
+    <button class="primary" onclick="showLeaderboard()">
+      🏆 랭킹 확인하러 가기
     </button>
 
     <button class="secondary" onclick="showScreen('home')">
       홈으로
     </button>
+  </div>
+</section>
+
+<!-- 랭킹 리더보드 화면 -->
+<section id="leaderboard" class="screen">
+  <button class="back" onclick="showScreen('home')">
+    ← 홈으로
+  </button>
+
+  <h2>🏆 전교생 실시간 랭킹</h2>
+
+  <div class="box">
+    <p class="muted">학교 구글 계정(@ggg.hs.kr)으로 등록된 실시간 계단왕 랭킹입니다.</p>
+    <div id="leaderboard-list">
+      <!-- 랭킹 항목이 JS로 추가됩니다 -->
+    </div>
   </div>
 </section>
 
@@ -266,6 +338,61 @@ label {
 </section>
 
 <script>
+// 사용자 상태 (구글 계정)
+let currentUser = null;
+
+// 구글 JWT 파싱 (Base64 디코딩)
+function parseJwt(token) {
+  const base64Url = token.split('.')[1];
+  const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+  const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+  }).join(''));
+  return JSON.parse(jsonPayload);
+}
+
+// 구글 로그인 콜백 및 도메인 검증
+function handleCredentialResponse(response) {
+  const payload = parseJwt(response.credential);
+  const userEmail = payload.email;
+
+  // 도메인 검증 (@ggg.hs.kr)
+  if (!userEmail.endsWith('@ggg.hs.kr')) {
+    alert('⚠️ 경고: @ggg.hs.kr 학교 구글 계정으로만 로그인할 수 있습니다.');
+    return;
+  }
+
+  currentUser = {
+    name: payload.name,
+    email: userEmail
+  };
+
+  localStorage.setItem('stepON-user', JSON.stringify(currentUser));
+  updateUserUI();
+  alert(`${currentUser.name}님 환영합니다!`);
+}
+
+function updateUserUI() {
+  const savedUser = localStorage.getItem('stepON-user');
+  if (savedUser) {
+    currentUser = JSON.parse(savedUser);
+    document.getElementById('login-container').hidden = true;
+    document.getElementById('user-info').hidden = false;
+    document.getElementById('user-name').textContent = currentUser.name;
+    document.getElementById('user-email').textContent = currentUser.email;
+  } else {
+    document.getElementById('login-container').hidden = false;
+    document.getElementById('user-info').hidden = true;
+  }
+}
+
+function logout() {
+  currentUser = null;
+  localStorage.removeItem('stepON-user');
+  updateUserUI();
+  alert('로그아웃 되었습니다.');
+}
+
 // 화면 전환
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(screen => {
@@ -284,11 +411,9 @@ let isTracking = false;
 let lastMagnitude = null;
 let lastStepTime = 0;
 
-// 감도 설정
 const STEP_THRESHOLD = 2.5;
 const MIN_STEP_INTERVAL = 350;
 
-// 브라우저 저장 데이터 불러오기
 function loadSession() {
   try {
     return JSON.parse(localStorage.getItem('stepON-session'));
@@ -310,7 +435,6 @@ function saveSession() {
   );
 }
 
-// 운동 시작
 function startWorkout() {
   targetFloor = Number(document.getElementById('goal').value);
   stepCount = 0;
@@ -331,7 +455,6 @@ function startWorkout() {
   requestSensor();
 }
 
-// 센서 권한 요청
 async function requestSensor() {
   if (typeof DeviceMotionEvent === 'undefined') {
     document.getElementById('sensor-status').textContent =
@@ -369,7 +492,6 @@ async function requestSensor() {
   document.getElementById('resume').hidden = true;
 }
 
-// 걸음 수 측정
 function handleMotion(event) {
   if (!session) return;
 
@@ -406,7 +528,6 @@ function handleMotion(event) {
   lastMagnitude = magnitude;
 }
 
-// NFC 태그를 찍은 뒤 현재 층 선택
 function checkFloor() {
   const selectedFloor = Number(
     document.getElementById('floor').value
@@ -443,7 +564,6 @@ function checkFloor() {
   }
 }
 
-// 운동량 계산
 function getStats() {
   return {
     calories: (stepCount * 0.04).toFixed(1),
@@ -451,7 +571,6 @@ function getStats() {
   };
 }
 
-// 화면 업데이트
 function render() {
   if (!session) return;
 
@@ -479,13 +598,12 @@ function render() {
   document.getElementById('finish').hidden = !reached;
 }
 
-// 운동량 화면
 function showStats() {
   render();
   showScreen('stats');
 }
 
-// 운동 완료 및 기록 저장
+// 운동 완료 및 실시간 랭킹 저장
 function finishWorkout() {
   if (!session || currentFloor < targetFloor) {
     alert('목표 층을 먼저 확인해주세요.');
@@ -504,7 +622,9 @@ function finishWorkout() {
     goal: targetFloor,
     steps: stepCount,
     calories: stats.calories,
-    distance: stats.distance
+    distance: stats.distance,
+    userName: currentUser ? currentUser.name : '익명 학생',
+    userEmail: currentUser ? currentUser.email : '비로그인'
   };
 
   const records = loadRecords();
@@ -514,6 +634,9 @@ function finishWorkout() {
     'stepON-records',
     JSON.stringify(records)
   );
+
+  // 실시간 랭킹 데이터 업로드 (로컬 스토리지 데모 랭킹)
+  updateLeaderboardData(record.userName, record.steps);
 
   document.getElementById('complete-title').textContent =
     targetFloor + '층 목표 달성!';
@@ -529,7 +652,61 @@ function finishWorkout() {
   showScreen('complete');
 }
 
-// 기록 불러오기
+// 랭킹 데이터 업데이트 로직
+function updateLeaderboardData(name, steps) {
+  let leaderboard = JSON.parse(localStorage.getItem('stepON-leaderboard') || '[]');
+  const existingIndex = leaderboard.findIndex(item => item.name === name);
+
+  if (existingIndex > -1) {
+    leaderboard[existingIndex].steps += steps; // 기존 총 걸음 누적
+  } else {
+    leaderboard.push({ name: name, steps: steps });
+  }
+
+  // 걸음 수 많은 순으로 정렬
+  leaderboard.sort((a, b) => b.steps - a.steps);
+  localStorage.setItem('stepON-leaderboard', JSON.stringify(leaderboard));
+}
+
+// 랭킹 리더보드 화면 구성
+function showLeaderboard() {
+  const list = document.getElementById('leaderboard-list');
+  list.replaceChildren();
+
+  // 기본 가상 더미 데이터 (비어있을 경우 예시 표시)
+  let leaderboard = JSON.parse(localStorage.getItem('stepON-leaderboard') || '[]');
+  
+  if (leaderboard.length === 0) {
+    leaderboard = [
+      { name: "김계단 (2학년)", steps: 450 },
+      { name: "박연세 (1학년)", steps: 320 },
+      { name: "이건강 (3학년)", steps: 210 }
+    ];
+  }
+
+  leaderboard.forEach((user, index) => {
+    const item = document.createElement('div');
+    item.className = 'rank-item';
+
+    const rank = document.createElement('span');
+    rank.className = `rank-badge rank-${index + 1}`;
+    rank.textContent = `${index + 1}위`;
+
+    const name = document.createElement('span');
+    name.style.flex = "1";
+    name.style.marginLeft = "10px";
+    name.textContent = user.name;
+
+    const steps = document.createElement('b');
+    steps.textContent = `${user.steps} 걸음`;
+
+    item.append(rank, name, steps);
+    list.appendChild(item);
+  });
+
+  showScreen('leaderboard');
+}
+
 function loadRecords() {
   try {
     return JSON.parse(
@@ -540,7 +717,6 @@ function loadRecords() {
   }
 }
 
-// 기록 목록
 function showRecords() {
   const list = document.getElementById('record-list');
   list.replaceChildren();
@@ -558,7 +734,7 @@ function showRecords() {
     item.className = 'record';
 
     const title = document.createElement('b');
-    title.textContent = record.goal + '층 목표 달성';
+    title.textContent = `${record.goal}층 목표 달성 (${record.userName})`;
 
     const date = document.createElement('p');
     date.textContent = record.date;
@@ -574,15 +750,16 @@ function showRecords() {
   showScreen('records');
 }
 
-// 기록 삭제
 function clearRecords() {
   if (!confirm('모든 기록을 삭제할까요?')) return;
 
   localStorage.removeItem('stepON-records');
+  localStorage.removeItem('stepON-leaderboard');
   showRecords();
 }
 
-// 저장된 운동 복구
+// 초기화
+updateUserUI();
 session = loadSession();
 
 if (session) {
