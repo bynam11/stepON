@@ -5,9 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>stepON - 스마트 계단 헬스케어</title>
 
-<!-- Google Identity Services (구글 로그인 SDK) -->
-<script src="https://accounts.google.com/gsi/client" async defer></script>
-
 <style>
 * { box-sizing: border-box; }
 
@@ -40,12 +37,21 @@ h1 { color: #007aff; font-size: 32px; margin-bottom: 8px; }
   box-shadow: 0 4px 12px #0000000a;
 }
 
-button, select { font: inherit; }
+button, select, input { font: inherit; }
 
 button {
   border: none;
   border-radius: 12px;
   cursor: pointer;
+}
+
+input {
+  width: 100%;
+  padding: 13px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  background: white;
+  margin-top: 6px;
 }
 
 .primary {
@@ -125,8 +131,8 @@ label {
 /* 랭킹 리더보드 스타일 */
 .user-profile {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 12px;
   background: #f0f7ff;
   padding: 12px 16px;
   border-radius: 12px;
@@ -141,8 +147,8 @@ label {
   border-bottom: 1px solid #f0f0f0;
 }
 
-.rank-item:first-child { background: #fffdf0; border-radius: 8px; } /* 1위 황금빛 효과 */
-.rank-badge { font-weight: bold; width: 30px; }
+.rank-item:first-child { background: #fffdf0; border-radius: 8px; }
+.rank-badge { font-weight: bold; width: 35px; }
 .rank-1 { color: #ff9500; }
 .rank-2 { color: #8e8e93; }
 .rank-3 { color: #ac6035; }
@@ -156,31 +162,33 @@ label {
   <h1>stepON</h1>
   <p class="muted">
     한 걸음부터 바꿔보세요!<br>
-    학교 구글 계정으로 로그인하고 전교생 랭킹에 도전하세요.
+    학교 계정(@ggg.hs.kr)으로 접속하여 랭킹에 도전하세요.
   </p>
 
-  <!-- 구글 로그인 / 계정 프로필 상자 -->
+  <!-- 로그인 상자 -->
   <div class="box">
     <div id="login-container">
-      <p><b>학교 구글 계정 로그인 (@ggg.hs.kr)</b></p>
-      <div id="g_id_onload"
-        data-client_id="YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
-        data-callback="handleCredentialResponse">
-      </div>
-      <div class="g_id_signin" data-type="standard"></div>
+      <p><b>학교 계정 인증</b></p>
+      <label for="input-email" style="font-size: 13px; color: #555;">이메일 주소</label>
+      <input type="email" id="input-email" placeholder="예: 251707@ggg.hs.kr">
+      
+      <label for="input-name" style="font-size: 13px; color: #555; margin-top: 10px;">이름 또는 닉네임</label>
+      <input type="text" id="input-name" placeholder="예: 홍길동">
+      
+      <button class="primary" onclick="handleSimpleLogin()">인증 후 로그인</button>
       <p class="notice" style="margin-top: 10px;">
-        ⚠️ 외부 구글 계정은 접근이 제한됩니다.
+        ⚠️ @ggg.hs.kr 도메인의 학교 계정만 로그인할 수 있습니다.
       </p>
     </div>
 
     <div id="user-info" hidden>
       <div class="user-profile">
         <div>
-          <b id="user-name">학생 이름</b><br>
+          <b id="user-name">이름</b><br>
           <span class="muted" id="user-email">000000@ggg.hs.kr</span>
         </div>
+        <button class="back" onclick="logout()" style="font-size: 12px; color: #ff3b30;">로그아웃</button>
       </div>
-      <button class="back" onclick="logout()" style="font-size: 12px; color: #ff3b30;">로그아웃</button>
     </div>
   </div>
 
@@ -313,10 +321,8 @@ label {
   <h2>🏆 전교생 실시간 랭킹</h2>
 
   <div class="box">
-    <p class="muted">학교 구글 계정(@ggg.hs.kr)으로 등록된 실시간 계단왕 랭킹입니다.</p>
-    <div id="leaderboard-list">
-      <!-- 랭킹 항목이 JS로 추가됩니다 -->
-    </div>
+    <p class="muted">학교 계정(@ggg.hs.kr) 학생들의 실제 계단 이용 랭킹입니다.</p>
+    <div id="leaderboard-list"></div>
   </div>
 </section>
 
@@ -338,38 +344,31 @@ label {
 </section>
 
 <script>
-// 사용자 상태 (구글 계정)
 let currentUser = null;
 
-// 구글 JWT 파싱 (Base64 디코딩)
-function parseJwt(token) {
-  const base64Url = token.split('.')[1];
-  const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-  const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-  }).join(''));
-  return JSON.parse(jsonPayload);
-}
+// 계정 직접 입력 인증 방식 (도메인 검증)
+function handleSimpleLogin() {
+  const emailInput = document.getElementById('input-email').value.trim();
+  const nameInput = document.getElementById('input-name').value.trim();
 
-// 구글 로그인 콜백 및 도메인 검증
-function handleCredentialResponse(response) {
-  const payload = parseJwt(response.credential);
-  const userEmail = payload.email;
+  if (!emailInput || !nameInput) {
+    alert('이메일과 이름을 모두 입력해주세요.');
+    return;
+  }
 
-  // 도메인 검증 (@ggg.hs.kr)
-  if (!userEmail.endsWith('@ggg.hs.kr')) {
-    alert('⚠️ 경고: @ggg.hs.kr 학교 구글 계정으로만 로그인할 수 있습니다.');
+  if (!emailInput.endsWith('@ggg.hs.kr')) {
+    alert('⚠️ 경고: @ggg.hs.kr 학교 이메일 주소만 허용됩니다.');
     return;
   }
 
   currentUser = {
-    name: payload.name,
-    email: userEmail
+    name: nameInput,
+    email: emailInput
   };
 
   localStorage.setItem('stepON-user', JSON.stringify(currentUser));
   updateUserUI();
-  alert(`${currentUser.name}님 환영합니다!`);
+  alert(`${currentUser.name}님 로그인되었습니다!`);
 }
 
 function updateUserUI() {
@@ -393,7 +392,6 @@ function logout() {
   alert('로그아웃 되었습니다.');
 }
 
-// 화면 전환
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(screen => {
     screen.classList.remove('active');
@@ -401,7 +399,6 @@ function showScreen(id) {
   document.getElementById(id).classList.add('active');
 }
 
-// 운동 상태
 let session = null;
 let stepCount = 0;
 let currentFloor = 1;
@@ -436,6 +433,11 @@ function saveSession() {
 }
 
 function startWorkout() {
+  if (!currentUser) {
+    alert('로그인 후 운동을 시작할 수 있습니다.');
+    return;
+  }
+
   targetFloor = Number(document.getElementById('goal').value);
   stepCount = 0;
   currentFloor = 1;
@@ -603,7 +605,6 @@ function showStats() {
   showScreen('stats');
 }
 
-// 운동 완료 및 실시간 랭킹 저장
 function finishWorkout() {
   if (!session || currentFloor < targetFloor) {
     alert('목표 층을 먼저 확인해주세요.');
@@ -623,8 +624,8 @@ function finishWorkout() {
     steps: stepCount,
     calories: stats.calories,
     distance: stats.distance,
-    userName: currentUser ? currentUser.name : '익명 학생',
-    userEmail: currentUser ? currentUser.email : '비로그인'
+    userName: currentUser ? currentUser.name : '익명',
+    userEmail: currentUser ? currentUser.email : ''
   };
 
   const records = loadRecords();
@@ -635,7 +636,6 @@ function finishWorkout() {
     JSON.stringify(records)
   );
 
-  // 실시간 랭킹 데이터 업로드 (로컬 스토리지 데모 랭킹)
   updateLeaderboardData(record.userName, record.steps);
 
   document.getElementById('complete-title').textContent =
@@ -652,57 +652,56 @@ function finishWorkout() {
   showScreen('complete');
 }
 
-// 랭킹 데이터 업데이트 로직
+// 랭킹 누적 데이터 갱정
 function updateLeaderboardData(name, steps) {
   let leaderboard = JSON.parse(localStorage.getItem('stepON-leaderboard') || '[]');
   const existingIndex = leaderboard.findIndex(item => item.name === name);
 
   if (existingIndex > -1) {
-    leaderboard[existingIndex].steps += steps; // 기존 총 걸음 누적
+    leaderboard[existingIndex].steps += steps;
   } else {
     leaderboard.push({ name: name, steps: steps });
   }
 
-  // 걸음 수 많은 순으로 정렬
   leaderboard.sort((a, b) => b.steps - a.steps);
   localStorage.setItem('stepON-leaderboard', JSON.stringify(leaderboard));
 }
 
-// 랭킹 리더보드 화면 구성
+// 실시간 랭킹 리더보드 출력 (더미 데이터 전면 삭제됨)
 function showLeaderboard() {
   const list = document.getElementById('leaderboard-list');
   list.replaceChildren();
 
-  // 기본 가상 더미 데이터 (비어있을 경우 예시 표시)
   let leaderboard = JSON.parse(localStorage.getItem('stepON-leaderboard') || '[]');
   
   if (leaderboard.length === 0) {
-    leaderboard = [
-      { name: "김계단 (2학년)", steps: 450 },
-      { name: "박연세 (1학년)", steps: 320 },
-      { name: "이건강 (3학년)", steps: 210 }
-    ];
+    const empty = document.createElement('p');
+    empty.style.textAlign = "center";
+    empty.style.padding = "20px 0";
+    empty.style.color = "#777";
+    empty.textContent = '아직 등록된 랭킹 기록이 없습니다. 첫 번째 주자가 되어보세요!';
+    list.appendChild(empty);
+  } else {
+    leaderboard.forEach((user, index) => {
+      const item = document.createElement('div');
+      item.className = 'rank-item';
+
+      const rank = document.createElement('span');
+      rank.className = `rank-badge rank-${index + 1}`;
+      rank.textContent = `${index + 1}위`;
+
+      const name = document.createElement('span');
+      name.style.flex = "1";
+      name.style.marginLeft = "10px";
+      name.textContent = user.name;
+
+      const steps = document.createElement('b');
+      steps.textContent = `${user.steps} 걸음`;
+
+      item.append(rank, name, steps);
+      list.appendChild(item);
+    });
   }
-
-  leaderboard.forEach((user, index) => {
-    const item = document.createElement('div');
-    item.className = 'rank-item';
-
-    const rank = document.createElement('span');
-    rank.className = `rank-badge rank-${index + 1}`;
-    rank.textContent = `${index + 1}위`;
-
-    const name = document.createElement('span');
-    name.style.flex = "1";
-    name.style.marginLeft = "10px";
-    name.textContent = user.name;
-
-    const steps = document.createElement('b');
-    steps.textContent = `${user.steps} 걸음`;
-
-    item.append(rank, name, steps);
-    list.appendChild(item);
-  });
 
   showScreen('leaderboard');
 }
@@ -758,7 +757,6 @@ function clearRecords() {
   showRecords();
 }
 
-// 초기화
 updateUserUI();
 session = loadSession();
 
